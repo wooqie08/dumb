@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dumb">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABhUlEQVR4Xu3c0WrDMBBFQaX//88uJVAKJQU70sq9O/MeCUfH6zwkGQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSPFIu5LrjOF69+PFo/f70vfg/mvitZyUd4ziVxU/dEukVx+Useibycf1Z/d9MKWOMaevcX5c4ZpXxNHe122oRx4qzXLHm3eTHse4U1618E+FxrD6/1evvlRxHzcnV7LJFchy8KTaOyhu6cq9KsXHwvsw46m/l+h0LZMbBFOLgpcA4dk34XfuuExgHs4iDTo8VZjE5MDk4z+TA5OA8k4NOk2PXDwh27buOyUGnycEsmZOjfsLX71ggMw6miI2j8lau3KtSbBy8LzmOmhu6ZpctkuMYY/nJBZcxRnocS/vILqNFHIv6iC+jSxzT++hQRqM4JvbRpIyvd2zLx+C9Ln9NvE8WTx3jeDqVSLcsusfxzf+QAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxPgEW2VLTGPO07UAAAAASUVORK5CYII=">
+<title>Dumb</title>
+<style>
+  :root { --fg:#f2f2f2; --dim:#5c5c5c; --line:#1c1c1c; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
+  html,body { background:#000; color:var(--fg); height:100%; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "Apple SD Gothic Neo", sans-serif;
+    padding: calc(env(safe-area-inset-top) + 28px) 28px calc(env(safe-area-inset-bottom) + 24px);
+    display:flex; flex-direction:column; min-height:100%;
+    -webkit-user-select:none; user-select:none; overscroll-behavior:none;
+  }
+  header { margin-bottom:44px; }
+  #time { font-size:76px; font-weight:200; letter-spacing:-3px; line-height:1; font-variant-numeric:tabular-nums; }
+  #date { margin-top:10px; font-size:15px; color:var(--dim); letter-spacing:.2px; }
+  #list { list-style:none; flex:1; }
+  #list li { display:flex; align-items:center; }
+  #list a {
+    flex:1; display:block; color:var(--fg); text-decoration:none;
+    font-size:30px; font-weight:300; letter-spacing:-.5px; padding:9px 0;
+  }
+  #list a:active { color:var(--dim); }
+  .tag { font-size:11px; color:var(--dim); margin-left:8px; vertical-align:middle; letter-spacing:.5px; }
+  footer { display:flex; justify-content:space-between; align-items:center; padding-top:24px; }
+  footer button, .btn {
+    background:none; border:none; color:var(--dim); font:inherit; font-size:14px; padding:8px 0; cursor:pointer;
+  }
+  /* edit mode */
+  body.editing #list a { pointer-events:none; color:#9a9a9a; }
+  .ctrl { display:none; gap:14px; align-items:center; }
+  body.editing .ctrl { display:flex; }
+  .ctrl button { background:none; border:none; color:var(--dim); font-size:14px; padding:6px 2px; }
+  .ctrl .del { color:#a33; font-size:20px; }
+  #addForm { display:none; margin-top:20px; border-top:1px solid var(--line); padding-top:16px; gap:10px; flex-direction:column; }
+  body.editing #addForm { display:flex; }
+  #addForm input {
+    background:#0d0d0d; border:1px solid var(--line); color:var(--fg); border-radius:10px;
+    padding:12px; font-size:16px; font-family:inherit;
+  }
+  #addForm .row { display:flex; gap:10px; }
+  #addForm .row input { flex:1; min-width:0; }
+  #addForm button { background:#161616; color:var(--fg); border:none; border-radius:10px; padding:12px 16px; font-size:15px; }
+  .hint { font-size:12px; color:var(--dim); line-height:1.5; }
+  /* friction overlay */
+  #gate {
+    position:fixed; inset:0; background:#000; display:none; flex-direction:column;
+    justify-content:center; align-items:center; text-align:center; padding:40px; gap:18px; z-index:9;
+  }
+  #gate.on { display:flex; }
+  #gateQ { font-size:22px; font-weight:300; line-height:1.4; }
+  #gateN { font-size:96px; font-weight:100; font-variant-numeric:tabular-nums; }
+  #gateGo {
+    display:none; color:var(--fg); text-decoration:none; font-size:18px;
+    border:1px solid #333; border-radius:999px; padding:12px 28px;
+  }
+  #gateGo.on { display:inline-block; }
+</style>
+</head>
+<body>
+  <header>
+    <div id="time">--:--</div>
+    <div id="date"></div>
+  </header>
+
+  <ul id="list"></ul>
+
+  <form id="addForm" autocomplete="off">
+    <input id="fName" placeholder="이름 (예: 배민)" required>
+    <div class="row">
+      <input id="fUrl" placeholder="URL 스킴 (예: baemin://)" required autocapitalize="off" autocorrect="off">
+      <input id="fDelay" type="number" inputmode="numeric" min="0" max="60" placeholder="대기(초)" style="max-width:96px">
+    </div>
+    <button type="submit">추가</button>
+    <p class="hint">대기 시간을 넣으면 열기 전에 카운트다운이 떠. 앱이 안 열리면 URL 스킴이 틀린 거니까 지우고 다시 넣으면 돼.</p>
+  </form>
+
+  <footer>
+    <button id="editBtn" type="button">편집</button>
+    <button id="resetBtn" type="button" style="display:none">기본값으로</button>
+  </footer>
+
+  <div id="gate">
+    <div id="gateQ"></div>
+    <div id="gateN"></div>
+    <a id="gateGo" href="#">열기</a>
+    <button class="btn" id="gateCancel" type="button">그만두기</button>
+  </div>
+
+<script>
+const DEFAULTS = [
+  { name:"전화",      url:"mobilephone://" },
+  { name:"메시지",    url:"sms:" },
+  { name:"카카오톡",  url:"kakaotalk://" },
+  { name:"지도",      url:"nmap://" },
+  { name:"캘린더",    url:"calshow://" },
+  { name:"사진",      url:"photos-redirect://" },
+  { name:"메모",      url:"mobilenotes://" },
+  { name:"알람",      url:"clock-alarm://" },
+  { name:"토스",      url:"supertoss://" },
+  { name:"Gmail",     url:"googlegmail://" },
+  { name:"Notion",    url:"notion://" },
+  { name:"Spotify",   url:"spotify://" },
+  { name:"쿠팡",      url:"coupang://",     delay:5 },
+  { name:"쿠팡이츠",  url:"coupangeats://", delay:5 },
+];
+const KEY = "dumb.apps.v1";
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch(e){ return null; } },
+  set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
+};
+let apps = store.get() || DEFAULTS.slice();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  $("list").innerHTML = apps.map((a,i) => `
+    <li>
+      <a href="${esc(a.url)}" data-i="${i}">${esc(a.name)}${a.delay ? `<span class="tag">${a.delay}s</span>` : ""}</a>
+      <span class="ctrl">
+        <button type="button" data-up="${i}" aria-label="위로">↑</button>
+        <button type="button" data-delay="${i}">대기</button>
+        <button type="button" class="del" data-del="${i}" aria-label="삭제">×</button>
+      </span>
+    </li>`).join("");
+}
+
+$("list").addEventListener("click", e => {
+  const t = e.target.closest("a,button"); if (!t) return;
+  if (t.dataset.up !== undefined) {
+    const i = +t.dataset.up; if (i > 0) { [apps[i-1], apps[i]] = [apps[i], apps[i-1]]; save(); }
+  } else if (t.dataset.del !== undefined) {
+    const i = +t.dataset.del;
+    if (confirm(`'${apps[i].name}' 삭제할까?`)) { apps.splice(i,1); save(); }
+  } else if (t.dataset.delay !== undefined) {
+    const i = +t.dataset.delay;
+    const v = prompt(`'${apps[i].name}' 열기 전 대기 시간(초). 0이면 없음`, apps[i].delay || 0);
+    if (v !== null) { const n = Math.max(0, Math.min(60, parseInt(v,10) || 0)); apps[i].delay = n || undefined; save(); }
+  } else if (t.tagName === "A") {
+    const a = apps[+t.dataset.i];
+    if (a && a.delay) { e.preventDefault(); gate(a); }
+  }
+});
+
+function save(){ store.set(apps); render(); }
+
+// friction gate
+let timer = null;
+function gate(a){
+  const go = $("gateGo");
+  go.classList.remove("on"); go.href = a.url;
+  $("gateQ").textContent = `${a.name}, 지금 꼭 필요해?`;
+  let n = a.delay; $("gateN").textContent = n;
+  $("gate").classList.add("on");
+  clearInterval(timer);
+  timer = setInterval(() => {
+    n--; $("gateN").textContent = n > 0 ? n : "";
+    if (n <= 0) { clearInterval(timer); go.classList.add("on"); }
+  }, 1000);
+}
+function closeGate(){ clearInterval(timer); $("gate").classList.remove("on"); }
+$("gateCancel").onclick = closeGate;
+$("gateGo").addEventListener("click", () => setTimeout(closeGate, 300));
+
+// edit mode
+$("editBtn").onclick = () => {
+  const on = document.body.classList.toggle("editing");
+  $("editBtn").textContent = on ? "완료" : "편집";
+  $("resetBtn").style.display = on ? "" : "none";
+};
+$("resetBtn").onclick = () => { if (confirm("목록을 기본값으로 되돌릴까?")) { apps = DEFAULTS.slice(); save(); } };
+$("addForm").addEventListener("submit", e => {
+  e.preventDefault();
+  let url = $("fUrl").value.trim();
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = url.replace(/:?\/*$/, "") + "://";
+  const delay = parseInt($("fDelay").value, 10) || undefined;
+  apps.push({ name: $("fName").value.trim(), url, delay });
+  e.target.reset(); save();
+});
+
+// clock
+const DAYS = ["일","월","화","수","목","금","토"];
+function tick(){
+  const d = new Date();
+  $("time").textContent = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  $("date").textContent = `${d.getMonth()+1}월 ${d.getDate()}일 ${DAYS[d.getDay()]}요일`;
+}
+tick(); setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); closeGate(); } });
+
+render();
+</script>
+</body>
+</html>
