@@ -11,25 +11,26 @@
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABhUlEQVR4Xu3c0WrDMBBFQaX//88uJVAKJQU70sq9O/MeCUfH6zwkGQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSPFIu5LrjOF69+PFo/f70vfg/mvitZyUd4ziVxU/dEukVx+Useibycf1Z/d9MKWOMaevcX5c4ZpXxNHe122oRx4qzXLHm3eTHse4U1618E+FxrD6/1evvlRxHzcnV7LJFchy8KTaOyhu6cq9KsXHwvsw46m/l+h0LZMbBFOLgpcA4dk34XfuuExgHs4iDTo8VZjE5MDk4z+TA5OA8k4NOk2PXDwh27buOyUGnycEsmZOjfsLX71ggMw6miI2j8lau3KtSbBy8LzmOmhu6ZpctkuMYY/nJBZcxRnocS/vILqNFHIv6iC+jSxzT++hQRqM4JvbRpIyvd2zLx+C9Ln9NvE8WTx3jeDqVSLcsusfxzf+QAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxPgEW2VLTGPO07UAAAAASUVORK5CYII=">
 <title>Dumb</title>
 <style>
-  :root { --fg:#f2f2f2; --dim:#5c5c5c; --line:#1c1c1c; }
+  :root { --fg:#ffffff; --dim:#6b6b6b; --line:#1c1c1c; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
   html,body { background:#000; color:var(--fg); height:100%; }
   body {
     font-family: -apple-system, "SF Pro Display", "Apple SD Gothic Neo", sans-serif;
+    font-weight:600;
     padding: calc(env(safe-area-inset-top) + 28px) 28px calc(env(safe-area-inset-bottom) + 24px);
     display:flex; flex-direction:column; min-height:100%;
     -webkit-user-select:none; user-select:none; overscroll-behavior:none;
   }
   header { margin-bottom:44px; }
-  #time { font-size:76px; font-weight:200; letter-spacing:-3px; line-height:1; font-variant-numeric:tabular-nums; }
-  #date { margin-top:10px; font-size:15px; color:var(--dim); letter-spacing:.2px; }
+  #time { font-size:61px; font-weight:600; letter-spacing:-2px; line-height:1; font-variant-numeric:tabular-nums; }
+  #date { margin-top:10px; font-size:15px; color:var(--fg); letter-spacing:.2px; }
   #list { list-style:none; flex:1; }
   #list li { display:flex; align-items:center; }
   #list a {
-    flex:1; display:block; color:var(--fg); text-decoration:none;
-    font-size:30px; font-weight:300; letter-spacing:-.5px; padding:9px 0;
+    flex:1; display:block; color:var(--dim); text-decoration:none; transition:color .08s;
+    font-size:30px; font-weight:600; letter-spacing:-.5px; padding:9px 0;
   }
-  #list a:active { color:var(--dim); }
+  #list a:active { color:var(--fg); transition:none; }
   .tag { font-size:11px; color:var(--dim); margin-left:8px; vertical-align:middle; letter-spacing:.5px; }
   footer { display:flex; justify-content:space-between; align-items:center; padding-top:24px; }
   footer button, .btn {
@@ -37,6 +38,7 @@
   }
   /* edit mode */
   body.editing #list a { pointer-events:none; color:#9a9a9a; }
+  #dial input { width:100%; background:none; border:none; border-bottom:1px solid #333; color:var(--fg); font:inherit; font-size:34px; text-align:center; padding:8px 0; outline:none; }
   .ctrl { display:none; gap:14px; align-items:center; }
   body.editing .ctrl { display:flex; }
   .ctrl button { background:none; border:none; color:var(--dim); font-size:14px; padding:6px 2px; }
@@ -52,13 +54,14 @@
   #addForm button { background:#161616; color:var(--fg); border:none; border-radius:10px; padding:12px 16px; font-size:15px; }
   .hint { font-size:12px; color:var(--dim); line-height:1.5; }
   /* friction overlay */
-  #gate {
+  #gate, .gate {
     position:fixed; inset:0; background:#000; display:none; flex-direction:column;
     justify-content:center; align-items:center; text-align:center; padding:40px; gap:18px; z-index:9;
   }
-  #gate.on { display:flex; }
-  #gateQ { font-size:22px; font-weight:300; line-height:1.4; }
-  #gateN { font-size:96px; font-weight:100; font-variant-numeric:tabular-nums; }
+  #gate.on, .gate.on { display:flex; }
+  #gateQ { font-size:22px; font-weight:600; line-height:1.4; }
+  #gateN { font-size:96px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill { color:var(--fg); text-decoration:none; font-size:18px; border:1px solid #333; border-radius:999px; padding:12px 28px; }
   #gateGo {
     display:none; color:var(--fg); text-decoration:none; font-size:18px;
     border:1px solid #333; border-radius:999px; padding:12px 28px;
@@ -96,13 +99,19 @@
     <button class="btn" id="gateCancel" type="button">그만두기</button>
   </div>
 
+  <div id="dial" class="gate">
+    <input id="dialNum" type="tel" inputmode="tel" placeholder="번호 입력" autocomplete="tel">
+    <a id="dialGo" class="pill" href="tel:">통화</a>
+    <button class="btn" id="dialCancel" type="button">닫기</button>
+  </div>
+
 <script>
 const DEFAULTS = [
-  { name:"전화",      url:"mobilephone://" },
+  { name:"전화",      url:"dial" },
   { name:"메시지",    url:"sms:" },
   { name:"카카오톡",  url:"kakaotalk://" },
   { name:"지도",      url:"nmap://" },
-  { name:"캘린더",    url:"calshow://" },
+  { name:"캘린더",    url:"navercalendar://" },
   { name:"사진",      url:"photos-redirect://" },
   { name:"메모",      url:"mobilenotes://" },
   { name:"알람",      url:"clock-alarm://" },
@@ -113,7 +122,7 @@ const DEFAULTS = [
   { name:"쿠팡",      url:"coupang://",     delay:5 },
   { name:"쿠팡이츠",  url:"coupangeats://", delay:5 },
 ];
-const KEY = "dumb.apps.v1";
+const KEY = "dumb.apps.v2";
 const store = {
   get(){ try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch(e){ return null; } },
   set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
@@ -148,7 +157,8 @@ $("list").addEventListener("click", e => {
     if (v !== null) { const n = Math.max(0, Math.min(60, parseInt(v,10) || 0)); apps[i].delay = n || undefined; save(); }
   } else if (t.tagName === "A") {
     const a = apps[+t.dataset.i];
-    if (a && a.delay) { e.preventDefault(); gate(a); }
+    if (a && a.url === "dial") { e.preventDefault(); openDial(); }
+    else if (a && a.delay) { e.preventDefault(); gate(a); }
   }
 });
 
@@ -171,6 +181,16 @@ function gate(a){
 function closeGate(){ clearInterval(timer); $("gate").classList.remove("on"); }
 $("gateCancel").onclick = closeGate;
 $("gateGo").addEventListener("click", () => setTimeout(closeGate, 300));
+
+// dialer
+function openDial(){ $("dialNum").value = ""; $("dialGo").href = "tel:"; $("dial").classList.add("on"); setTimeout(() => $("dialNum").focus(), 50); }
+function closeDial(){ $("dial").classList.remove("on"); $("dialNum").blur(); }
+$("dialNum").addEventListener("input", e => { $("dialGo").href = "tel:" + e.target.value.replace(/[^0-9+*#]/g, ""); });
+$("dialGo").addEventListener("click", e => { if ($("dialGo").href === "tel:") e.preventDefault(); else setTimeout(closeDial, 300); });
+$("dialCancel").onclick = closeDial;
+
+// iOS: enable :active highlight on touch
+document.addEventListener("touchstart", () => {}, { passive: true });
 
 // edit mode
 $("editBtn").onclick = () => {
@@ -196,7 +216,7 @@ function tick(){
   $("date").textContent = `${d.getMonth()+1}월 ${d.getDate()}일 ${DAYS[d.getDay()]}요일`;
 }
 tick(); setInterval(tick, 1000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); closeGate(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { tick(); closeGate(); closeDial(); } });
 
 render();
 </script>
